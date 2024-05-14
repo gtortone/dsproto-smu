@@ -147,8 +147,6 @@ if __name__ == "__main__":
         print(f"E: {e}")
         sys.exit(-1)
 
-    print(model)
-
     if model.startswith("MODEL "):
         model = model.split(' ')[1]
 
