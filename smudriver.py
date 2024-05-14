@@ -23,6 +23,7 @@ class SMUDevice:
 
     def reset(self):
         self.write("*RST")
+        self.write("*CLS")
 
 class SMUModel(Enum):
     K2450 = '2450',
@@ -32,13 +33,15 @@ class SMUKeithley2450(SMUDevice):
         super().__init__(session)
 
         self.sourcelist = [ 'VOLT', 'CURR' ]
-        self.senselist = [ 'VOLT:DC', 'CURR:DC', 'RES']
+        self.measurelist = [ '"VOLT:DC"', '"CURR:DC"', '"RES"']
+        self.termlist = [ 'FRON', 'REAR' ]
 
         self.vrange = [ '0.02', '0.2', '2', '20', '200' ]
         self.vrangestr = [ '20mV', '200mV', '2V', '20V', '200V' ]
 
         self.irange = [ '1E-08', '1E-07', '1E-06', '1E-05', '0.0001', '0.001', '0.01', '0.1', '1' ]
         self.irangestr = [ '10nA', '100nA', '1uA', '10uA', '100uA', '1mA', '10mA', '100mA', '1A' ]
+
 
         self.model = SMUModel.K2450
         self.modelname = "2450"
@@ -53,8 +56,9 @@ class SMUKeithley2450(SMUDevice):
         self.readback = {
             "source Vrange" : "",
             "source Irange" : "",
-            "sense Vrange" : "",
-            "sense Irange" : "",
+            "measure Vrange" : "",
+            "measure Irange" : "",
+            "last error" : ""
         }
 
         self.source = ""
@@ -64,13 +68,16 @@ class SMUKeithley2450(SMUDevice):
     def getSettingsSchema(self):
         self.settings["source"] = ""
         self.settings["source level"] = 0.0
-        self.settings["sense"] = ""
-        self.settings["sense level"] = 0.0
+        self.settings["measure"] = ""
+        self.settings["measure level"] = 0.0
         self.settings["source Vrange"] = ""
         self.settings["source Irange"] = ""
-        self.settings["sense Vrange"] = ""
-        self.settings["sense Irange"] = ""
+        self.settings["measure Vrange"] = ""
+        self.settings["measure Irange"] = ""
+        self.settings["source Vlimit"] = 0.0
+        self.settings["source Ilimit"] = 0.0
         self.settings["last error"] = ""
+        self.settings["terminals"] = ""
         return self.settings
 
     def getReadbackSchema(self):
@@ -78,7 +85,7 @@ class SMUKeithley2450(SMUDevice):
 
     # SOURCE 
 
-    def setSource(self, value):
+    def setSource(self, value): 
         if value in self.sourcelist:
             self.write(f":SOURCE:FUNC {value}")
 
@@ -92,41 +99,94 @@ class SMUKeithley2450(SMUDevice):
     def getSourceLevel(self):
         return self.query(f":SOURCE:{self.source}:LEV?")
 
-    # SOURCE voltage range
+    # MEASURE
 
-    def setSourceVoltageRange(self, vrange):
-        if str.lower(vrange) == 'auto':
-            self.write(":SOURCE:VOLT:RANG:AUTO ON")
-        elif vrange in self.vrangestr:
-            i = self.vrangestr.index(vrange)
-            self.write(f":SOURCE:VOLT:RANG {self.vrange[i]}")
+    def setMeasure(self, value):
+        if value in self.measurelist:
+            self.write(f":SENS:FUNC {value}")
 
-    def getSourceVoltageRange(self):
-        vrange = self.query(":SOURCE:VOLT:RANG?")
-        if vrange in self.vrange:
-            i = self.vrange.index(vrange)
-            if int(self.query(":SOURCE:VOLT:RANG:AUTO?")) == 1:
-                return (self.vrangestr[i], "auto")
-            else: 
-                return (self.vrangestr[i], self.vrangestr[i])
+    def getMeasure(self):
+        return self.query(":SENS:FUNC?")
 
-    # SOURCE current range
+    def getMeasureLevel(self):
+        return float(self.query(":READ?"))
 
-    def setSourceCurrentRange(self, irange):
-        if str.lower(irange) == 'auto':
-            self.write(":SOURCE:CURR:RANGE:AUTO ON")
-        elif irange in self.irangestr:
-            i = self.irangestr.index(irange)
-            self.write(f":SOURCE:CURR:RANG {self.irange[i]}")
+    # GENERIC source/measure voltage/current range
 
-    def getSourceCurrentRange(self):
-        irange = self.query(":SOURCE:CURR:RANG?")
-        if irange in self.irange:
-            i = self.irange.index(irange)
-            if int(self.query(":SOURCE:CURR:RANG:AUTO?")) == 1:
-                return (self.irangestr[i], "auto")
-            else:
-                return (self.irangestr[i], self.irangestr[i])
+    def setRange(self, direction, function, value):
+        if direction != "SOURCE" and direction != "SENS":
+            return
+        if function == 'CURR':
+            if str.lower(value) == 'auto':
+                self.write(f":{direction}:CURR:RANG:AUTO ON")
+            elif value in self.irangestr:
+                i = self.irangestr.index(value)
+                self.write(f":{direction}:CURR:RANG {self.irange[i]}")
+        elif function == 'VOLT':
+            if str.lower(value) == 'auto':
+                self.write(f":{direction}:VOLT:RANG:AUTO ON")
+            elif value in self.vrangestr:
+                i = self.vrangestr.index(value)
+                self.write(f":{direction}:VOLT:RANG {self.vrange[i]}")
+
+    def getRange(self, direction, function):
+        if direction != "SOURCE" and direction != "SENS":
+            return (None, None)
+        if function == 'CURR':
+            irange = self.query(f":{direction}:CURR:RANG?") 
+            if irange in self.irange:
+                i = self.irange.index(irange)
+                if int(self.query(f":{direction}:CURR:RANG:AUTO?")) == 1:
+                    return (self.irangestr[i], "auto")
+                else:
+                    return (self.irangestr[i], self.irangestr[i])
+        elif function == 'VOLT':
+            vrange = self.query(f":{direction}:VOLT:RANG?")
+            if vrange in self.vrange:
+                i = self.vrange.index(vrange)
+                if int(self.query(f":{direction}:VOLT:RANG:AUTO?")) == 1:
+                    return (self.vrangestr[i], "auto")
+                else: 
+                    return (self.vrangestr[i], self.vrangestr[i])
+
+    # LIMIT
+
+    def getLimit(self, function):
+        if function == 'VOLT':
+            return (float(self.query(f':SOUR:CURR:VLIMIT?')))
+        elif function == 'CURR':
+            return (float(self.query(f':SOUR:VOLT:ILIMIT?')))
+
+    def setLimit(self, function, value):
+        if function == 'VOLT':
+            self.write(f':SOUR:CURR:VLIMIT {value}')
+        elif function == 'CURR':
+            self.write(f':SOUR:VOLT:ILIMT {value}')
+
+    # OUTPUT
+
+    def setOutput(self, value):
+        if value in ['ON', 'OFF'] or value in [0, 1]:
+            self.write(f':OUTP {value}')
+
+    def getOutput(self):
+        return int(self.query(":OUTP?"))
+
+    # TERMINALS
+
+    def setTerminals(self, value):
+        if value in self.termlist:
+            self.write(f'ROUTE:TERM {value}')
+
+    def getTerminals(self):
+        return self.query('ROUTE:TERM?')
+
+    # LOG
+
+    def getLastError(self):
+        line = self.query(":SYST:ERR?")
+        errorCode = line.split(',')[0]
+        return (int(errorCode), line)
 
 def SMUFactory(model, session):
     if model not in [m.value[0] for m in SMUModel]:

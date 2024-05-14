@@ -33,41 +33,79 @@ class SMU(midas.frontend.EquipmentBase):
         self.updateODB()
 
     def debug(self):
+        print(f'output: {self.smu.getOutput()}')
+        print(f'terminals: {self.smu.getTerminals()}')
+        print("-")
         print(f'source func: {self.smu.getSource()}')
         print(f'source level: {self.smu.getSourceLevel()}')
-        print(f'Vsource range: {self.smu.getSourceVoltageRange()}')
-        print(f'Isource range: {self.smu.getSourceCurrentRange()}')
-        print("*")
+        print(f'source Vrange: {self.smu.getRange("SOURCE", "VOLT")}')
+        print(f'source Irange: {self.smu.getRange("SOURCE", "CURR")}')
+        print(f'source Vlimit: {self.smu.getLimit("VOLT")}')
+        print(f'source Ilimit: {self.smu.getLimit("CURR")}')
+        print("-")
+        print(f'measure func: {self.smu.getMeasure()}')
+        print(f'measure level: {self.smu.getMeasureLevel()}')
+        print(f'measure Vrange: {self.smu.getRange("SENS", "VOLT")}')
+        print(f'measure Irange: {self.smu.getRange("SENS", "CURR")}')
+        print("-")
+        print(self.smu.getLastError())
+        print("***")
 
     def readout_func(self):
-        self.debug()
+        #self.debug()
         self.updateODB()
 
     def detailed_settings_changed_func(self, path, idx, new_value):
-        if path == f'{self.odb_settings_dir}/source Vrange':
-            self.smu.setSourceVoltageRange(new_value)
-        elif path == f'{self.odb_settings_dir}/source Irange':
-            self.smu.setSourceCurrentRange(new_value)
+        if path == f'{self.odb_settings_dir}/output':
+            self.smu.setOutput(new_value)
         elif path == f'{self.odb_settings_dir}/source':
             self.smu.setSource(new_value)
         elif path == f'{self.odb_settings_dir}/source level':
             self.smu.setSourceLevel(new_value)
+        elif path == f'{self.odb_settings_dir}/source Vrange':
+            self.smu.setRange("SOURCE", "VOLT", new_value)
+        elif path == f'{self.odb_settings_dir}/source Irange':
+            self.smu.setRange("SOURCE", "CURR", new_value)
+        elif path == f'{self.odb_settings_dir}/measure':
+            self.smu.setMeasure(new_value)
+        elif path == f'{self.odb_settings_dir}/measure Vrange':
+            self.smu.setRange("SENS", "VOLT", new_value)
+        elif path == f'{self.odb_settings_dir}/measure Irange':
+            self.smu.setRange("SENS", "CURR", new_value)
+        elif path == f'{self.odb_settings_dir}/terminals':
+            self.smu.setTerminals(new_value)
+        elif path == f'{self.odb_settings_dir}/source Vlimit':
+            self.smu.setLimit("VOLT", new_value)
+        elif path == f'{self.odb_settings_dir}/source Ilimit':
+            self.smu.setLimit("CURR", new_value)
 
-        # handle errors...
+        error = self.smu.getLastError()
+        if error[0] != 0:
+            self.client.msg(error[1], is_error=True)
 
     def updateODB(self):
         readback = self.smu.getReadbackSchema()
         settings = self.smu.getSettingsSchema()
 
-        readback['source Vrange'] = self.smu.getSourceVoltageRange()[0]
-        readback['source Irange'] = self.smu.getSourceCurrentRange()[0]
+        readback['source Vrange'] = self.smu.getRange("SOURCE", "VOLT")[0]
+        readback['source Irange'] = self.smu.getRange("SOURCE", "CURR")[0]
+        readback['measure Vrange'] = self.smu.getRange("SENS", "VOLT")[0]
+        readback['measure Irange'] = self.smu.getRange("SENS", "CURR")[0] 
 
         self.client.odb_set(self.odb_readback_dir, readback, remove_unspecified_keys=False)
 
+        settings['output'] = self.smu.getOutput()
+        settings['terminals'] = self.smu.getTerminals()
         settings['source'] = self.smu.getSource()
         settings['source level'] = self.smu.getSourceLevel()
-        settings['source Vrange'] = self.smu.getSourceVoltageRange()[1]
-        settings['source Irange'] = self.smu.getSourceCurrentRange()[1]
+        settings['source Vrange'] = self.smu.getRange("SOURCE", "VOLT")[1]
+        settings['source Irange'] = self.smu.getRange("SOURCE", "CURR")[1]
+        settings['source Vlimit'] = self.smu.getLimit("VOLT")
+        settings['source Ilimit'] = self.smu.getLimit("CURR")
+        settings['measure'] = self.smu.getMeasure()
+        settings['measure level'] = self.smu.getMeasureLevel()
+        settings['measure Vrange'] = self.smu.getRange("SENS", "VOLT")[1]
+        settings['measure Irange'] = self.smu.getRange("SENS", "CURR")[1]
 
         if(settings != self.settings):
             for k,v in settings.items():

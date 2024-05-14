@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html class="mcss">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="mhttpd.js"></script>
+   <title>Keithley 2450</title>
+
+   <style>
+      .mtable td { padding: 5px; }
+   </style>
+
+   <script>
+      function check_fe_running() {
+         var path = "/System/Clients";
+         mjsonrpc_db_get_value(path).then(
+            function(rpc) {
+               let smu_running = false;
+               if (rpc.result.status[0] == 1) {
+                  let clients = rpc.result.data[0];
+                  for (let key in clients) {
+                     if (key.endsWith("/name")) {
+                        continue;
+                     }
+                  
+                     if (clients[key].name.startsWith("SMU-2450")) {
+                        smu_running = true;
+                     }
+                  }
+               }
+              
+               if (!smu_running) {
+                  document.getElementById("smu_fe_stopped").style.display = "block";
+               } else {
+                  document.getElementById("smu_fe_stopped").style.display = "none";
+               }
+               setTimeout(check_fe_running, 5000);
+            }).catch(function(error) {
+              mjsonrpc_error_alert(error);
+              setTimeout(check_fe_running, 5000);
+            });
+      }
+
+      function init() {
+         check_fe_running(); 
+         mhttpd_init('SMU');
+      }
+      
+
+   </script>
+
+</head>
+
+<body class="mcss" onload="init();">
+
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+
+  <table>
+      <tr>
+         <td style="vertical-align:top; padding-left:10px">
+            <div id="smu_fe_stopped" style="display:none;" class="mred mfont">
+               The SMU driver program is not running! Go to the <a href="?cmd=Programs">Programs page</a>
+               and start the SMU program!
+            </div>
+         </td>
+      </tr>
+      
+   </table>
+   <table class="mtable" style="width: 60%">
+      <tr>
+         <th colspan="6" class="mtableheader"><b>SMU - Keithley 2450</b></th>
+      </tr>
+      <tr>
+         <td><b>SOURCE</b></td>
+         <td style="width: 80%">
+            <table class="mtable" style="width: 100%">
+               <tr>
+                  <th></th>
+                  <th>level</th>
+                  <th>V range</th>
+                  <th>I range</th>
+               </tr>
+               <tr>
+                  <td>
+                     <div align="center">
+                        <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/source">
+                           <option value="VOLT">VOLTAGE</option>
+                           <option value="CURR">CURRENT</option>
+                        </select>
+                     </div>
+                  </td>   
+                  <td>
+                     <div class="modbvalue" data-format="%f4" data-odb-editable="1" data-odb-path="/Equipment/SMU-2450-01/Settings/source level" align="center"/>
+                  </td>   
+                  <td>
+                     <div align="center">
+                        <div style="display: inline">
+                           <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/source Vrange">
+                              <option>auto</option>
+                              <option>20mV</option>
+                              <option>200mV</option>
+                              <option>2V</option>
+                              <option>20V</option>
+                              <option>200V</option>
+                           </select>
+                        </div>
+                        <div style="display: inline" class="modbvalue" data-format="%f4" data-odb-path="/Equipment/SMU-2450-01/Readback/source Vrange" align="center"/>
+                     </div>
+                  </td>
+                  <td>
+                     <div align="center">
+                        <div style="display: inline">
+                           <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/source Irange">
+                              <option>auto</option>
+                              <option>10nA</option>
+                              <option>100nA</option>
+                              <option>1uA</option>
+                              <option>10uA</option>
+                              <option>100uA</option>
+                              <option>1mA</option>
+                              <option>10mA</option>
+                              <option>100mA</option>
+                              <option>1A</option>
+                           </select>
+                        </div>
+                        <div style="display: inline" class="modbvalue" data-format="%f4" data-odb-path="/Equipment/SMU-2450-01/Readback/source Irange" align="center"/>
+                     </div>
+                  </td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+      <tr>
+         <td><b>MEASURE</b></td>
+         <td style="width: 80%">
+            <table class="mtable" style="width: 100%">
+               <tr>
+                  <th></th>
+                  <th>level</th>
+                  <th>V range</th>
+                  <th>I range</th>
+               </tr>
+               <tr>
+                  <td>
+                     <div align="center">
+                        <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/measure">
+                           <option value='"VOLT:DC"'>VOLTAGE</option>
+                           <option value='"CURR:DC"'>CURRENT</option>
+                        </select>
+                     </div>
+                  </td>   
+                  <td>
+                     <div class="modbvalue" data-odb-path="/Equipment/SMU-2450-01/Settings/measure level" align="center"/>
+                  </td>   
+                  <td>
+                     <div align="center">
+                        <div style="display: inline">
+                           <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/measure Vrange">
+                              <option>auto</option>
+                              <option>20mV</option>
+                              <option>200mV</option>
+                              <option>2V</option>
+                              <option>20V</option>
+                              <option>200V</option>
+                           </select>
+                        </div>
+                        <div style="display: inline" class="modbvalue" data-format="%f4" data-odb-path="/Equipment/SMU-2450-01/Readback/measure Vrange" align="center"/>
+                     </div>
+                  </td>
+                  <td>
+                     <div align="center">
+                        <div style="display: inline">
+                           <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/measure Irange">
+                              <option>auto</option>
+                              <option>10nA</option>
+                              <option>100nA</option>
+                              <option>1uA</option>
+                              <option>10uA</option>
+                              <option>100uA</option>
+                              <option>1mA</option>
+                              <option>10mA</option>
+                              <option>100mA</option>
+                              <option>1A</option>
+                           </select>
+                        </div>
+                        <div style="display: inline" class="modbvalue" data-format="%f4" data-odb-path="/Equipment/SMU-2450-01/Readback/measure Irange" align="center"/>
+                     </div>
+                  </td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+      <tr>
+         <td><b>Options</b></td>
+         <td style="width: 80%">
+            <table class="mtable" style="width: 100%">
+               <tr>
+                  <th>terminals</th>
+                  <th>source Vlimit</th>
+                  <th>source Ilimit</th>
+               </tr>
+               <tr>
+                  <td>
+                     <div align="center">
+                        <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/terminals">
+                           <option value="FRON">FRONT</option>
+                           <option value="REAR">REAR</option>
+                        </select>
+                     </div>
+                  </td>
+                  <td>
+                     <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/SMU-2450-01/Settings/source Vlimit" align="center"/>
+                  </td>
+                  <td>
+                     <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/SMU-2450-01/Settings/source Ilimit" align="center"/>
+                  </td>
+               </tr>
+            </table>
+         </td>
+      </tr>
+      <tr>
+         <td><b>Output</b></td>
+         <td>
+            <div align="center">
+               <select class="modbselect" data-odb-path="/Equipment/SMU-2450-01/Settings/output">
+                  <option value="false">OFF</option>
+                  <option value="true">ON</option>
+               </select>
+            </div>
+         </td>
+      </tr>
+
+      
+   </table>
+   
+</div>
+</body>
+</html>
