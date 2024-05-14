@@ -54,6 +54,13 @@ class SMU(midas.frontend.EquipmentBase):
     def readout_func(self):
         #self.debug()
         self.updateODB()
+        event = midas.event.Event()
+
+        event.create_bank('SVAL', midas.TID_FLOAT, [float(self.smu.getSourceLevel())])
+        event.create_bank('MVAL', midas.TID_FLOAT, [float(self.smu.getMeasureLevel())])
+        event.create_bank('OUTP', midas.TID_INT32, [int(self.smu.getOutput())])
+
+        return event
 
     def detailed_settings_changed_func(self, path, idx, new_value):
         if path == f'{self.odb_settings_dir}/output':
