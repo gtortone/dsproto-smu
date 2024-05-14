@@ -161,7 +161,7 @@ class SMUKeithley2450(SMUDevice):
         if function == 'VOLT':
             self.write(f':SOUR:CURR:VLIMIT {value}')
         elif function == 'CURR':
-            self.write(f':SOUR:VOLT:ILIMT {value}')
+            self.write(f':SOUR:VOLT:ILIMIT {value}')
 
     # OUTPUT
 
