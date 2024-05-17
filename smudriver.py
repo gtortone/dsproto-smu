@@ -51,14 +51,33 @@ class SMUKeithley2450(SMUDevice):
             "brand" : self.brand,
             "model": self.modelname,
             "output": False,
+            "terminals" : "",
+            "source" : {
+                "function" : "",
+                "level" : 0.0,
+                "Vrange" : "",
+                "Irange" : "",
+                "Vlimit" : 0.0,
+                "Ilimit" : 0.0,
+            },
+            "measure" : {
+                "function" : "",
+                "Vrange" : "",
+                "Irange" : "",
+            },
         }
 
         self.readback = {
-            "source Vrange" : "",
-            "source Irange" : "",
-            "measure Vrange" : "",
-            "measure Irange" : "",
-            "last error" : ""
+            "source" : {
+                "Vrange" : "",
+                "Irange" : "",
+            },
+            "measure" : {
+                "level" : 0.0,
+                "Vrange" : "",
+                "Irange" : "",
+            },
+            "last error" : "",
         }
 
         self.source = ""
@@ -66,18 +85,6 @@ class SMUKeithley2450(SMUDevice):
         self.reset()
 
     def getSettingsSchema(self):
-        self.settings["source"] = ""
-        self.settings["source level"] = 0.0
-        self.settings["measure"] = ""
-        self.settings["measure level"] = 0.0
-        self.settings["source Vrange"] = ""
-        self.settings["source Irange"] = ""
-        self.settings["measure Vrange"] = ""
-        self.settings["measure Irange"] = ""
-        self.settings["source Vlimit"] = 0.0
-        self.settings["source Ilimit"] = 0.0
-        self.settings["last error"] = ""
-        self.settings["terminals"] = ""
         return self.settings
 
     def getReadbackSchema(self):

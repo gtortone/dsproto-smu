@@ -7,6 +7,7 @@ import midas.event
 from pyvisa import ResourceManager
 
 from smudriver import SMUModel, SMUDevice, SMUFactory
+from utils import flatten_dict
 
 class SMU(midas.frontend.EquipmentBase):
 
@@ -65,25 +66,25 @@ class SMU(midas.frontend.EquipmentBase):
     def detailed_settings_changed_func(self, path, idx, new_value):
         if path == f'{self.odb_settings_dir}/output':
             self.smu.setOutput(new_value)
-        elif path == f'{self.odb_settings_dir}/source':
+        elif path == f'{self.odb_settings_dir}/source/function':
             self.smu.setSource(new_value)
-        elif path == f'{self.odb_settings_dir}/source level':
+        elif path == f'{self.odb_settings_dir}/source/level':
             self.smu.setSourceLevel(new_value)
-        elif path == f'{self.odb_settings_dir}/source Vrange':
+        elif path == f'{self.odb_settings_dir}/source/Vrange':
             self.smu.setRange("SOURCE", "VOLT", new_value)
-        elif path == f'{self.odb_settings_dir}/source Irange':
+        elif path == f'{self.odb_settings_dir}/source/Irange':
             self.smu.setRange("SOURCE", "CURR", new_value)
-        elif path == f'{self.odb_settings_dir}/measure':
+        elif path == f'{self.odb_settings_dir}/measure/function':
             self.smu.setMeasure(new_value)
-        elif path == f'{self.odb_settings_dir}/measure Vrange':
+        elif path == f'{self.odb_settings_dir}/measure/Vrange':
             self.smu.setRange("SENS", "VOLT", new_value)
-        elif path == f'{self.odb_settings_dir}/measure Irange':
+        elif path == f'{self.odb_settings_dir}/measure/Irange':
             self.smu.setRange("SENS", "CURR", new_value)
         elif path == f'{self.odb_settings_dir}/terminals':
             self.smu.setTerminals(new_value)
-        elif path == f'{self.odb_settings_dir}/source Vlimit':
+        elif path == f'{self.odb_settings_dir}/source/Vlimit':
             self.smu.setLimit("VOLT", new_value)
-        elif path == f'{self.odb_settings_dir}/source Ilimit':
+        elif path == f'{self.odb_settings_dir}/source/Ilimit':
             self.smu.setLimit("CURR", new_value)
 
         error = self.smu.getLastError()
@@ -94,29 +95,31 @@ class SMU(midas.frontend.EquipmentBase):
         readback = self.smu.getReadbackSchema()
         settings = self.smu.getSettingsSchema()
 
-        readback['source Vrange'] = self.smu.getRange("SOURCE", "VOLT")[0]
-        readback['source Irange'] = self.smu.getRange("SOURCE", "CURR")[0]
-        readback['measure Vrange'] = self.smu.getRange("SENS", "VOLT")[0]
-        readback['measure Irange'] = self.smu.getRange("SENS", "CURR")[0] 
+        readback['source']['Vrange'] = self.smu.getRange("SOURCE", "VOLT")[0]
+        readback['source']['Irange'] = self.smu.getRange("SOURCE", "CURR")[0]
+        readback['measure']['level'] = self.smu.getMeasureLevel()
+        readback['measure']['Vrange'] = self.smu.getRange("SENS", "VOLT")[0]
+        readback['measure']['Irange'] = self.smu.getRange("SENS", "CURR")[0] 
 
         self.client.odb_set(self.odb_readback_dir, readback, remove_unspecified_keys=False)
 
         settings['output'] = self.smu.getOutput()
         settings['terminals'] = self.smu.getTerminals()
-        settings['source'] = self.smu.getSource()
-        settings['source level'] = self.smu.getSourceLevel()
-        settings['source Vrange'] = self.smu.getRange("SOURCE", "VOLT")[1]
-        settings['source Irange'] = self.smu.getRange("SOURCE", "CURR")[1]
-        settings['source Vlimit'] = self.smu.getLimit("VOLT")
-        settings['source Ilimit'] = self.smu.getLimit("CURR")
-        settings['measure'] = self.smu.getMeasure()
-        settings['measure level'] = self.smu.getMeasureLevel()
-        settings['measure Vrange'] = self.smu.getRange("SENS", "VOLT")[1]
-        settings['measure Irange'] = self.smu.getRange("SENS", "CURR")[1]
+        settings['source']['function'] = self.smu.getSource()
+        settings['source']['level'] = self.smu.getSourceLevel()
+        settings['source']['Vrange'] = self.smu.getRange("SOURCE", "VOLT")[1]
+        settings['source']['Irange'] = self.smu.getRange("SOURCE", "CURR")[1]
+        settings['source']['Vlimit'] = self.smu.getLimit("VOLT")
+        settings['source']['Ilimit'] = self.smu.getLimit("CURR")
+        settings['measure']['function'] = self.smu.getMeasure()
+        settings['measure']['Vrange'] = self.smu.getRange("SENS", "VOLT")[1]
+        settings['measure']['Irange'] = self.smu.getRange("SENS", "CURR")[1]
 
         if(settings != self.settings):
-            for k,v in settings.items():
-                if settings[k] != self.settings[k]:
+            local_settings = flatten_dict(settings)
+            odb_settings = flatten_dict(self.settings)
+            for k,v in local_settings.items():
+                if local_settings[k] != odb_settings[k]:
                     self.client.odb_set(f'{self.odb_settings_dir}/{k}', v, remove_unspecified_keys=False)
 
 class SMUFrontend(midas.frontend.FrontendBase):
