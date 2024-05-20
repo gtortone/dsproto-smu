@@ -48,20 +48,21 @@ class SMU(midas.frontend.EquipmentBase):
         self.session.read_termination = '\n'
         self.session.write_termination = '\n'
 
+        readmodel = None
         try:
-            model = self.session.query('*CLS; *IDN?').split(',')[1]
+            readmodel = self.session.query('*CLS; *IDN?').split(',')[1]
         except Exception as e:
             self.client.msg(f"No device found on {ipaddress}", is_error=True)
             self.client.communicate(1000)
             sys.exit(-1)
 
-        if model.startswith("MODEL "):
-            model = model.split(' ')[1]
+        if readmodel.startswith("MODEL "):
+            readmodel = readmodel.split(' ')[1]
 
-        if model == args.model:
+        if model == readmodel:
             self.client.msg(f"SMU {model} found on {ipaddress}")
         else:
-            self.client.msg(f"SMU {args.model} not found on {ipaddress}", is_error=True)
+            self.client.msg(f"SMU {model} not found on {ipaddress}", is_error=True)
             self.client.communicate(1000)
             sys.exit(-1)
 
