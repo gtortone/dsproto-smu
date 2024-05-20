@@ -1,8 +1,8 @@
 from enum import Enum
 
 class SMUDevice:
-    def __init__(self, session):
-        self.session = session
+    def __init__(self):
+        self.session = None
 
     def query(self, cmd):
         res = ""
@@ -25,12 +25,15 @@ class SMUDevice:
         self.write("*RST")
         self.write("*CLS")
 
+    def setSession(self, session):
+        self.session = session
+
 class SMUModel(Enum):
     K2450 = '2450',
 
 class SMUKeithley2450(SMUDevice):
-    def __init__(self, session):
-        super().__init__(session)
+    def __init__(self):
+        super().__init__()
 
         self.sourcelist = [ 'VOLT', 'CURR' ]
         self.measurelist = [ '"VOLT:DC"', '"CURR:DC"', '"RES"']
@@ -48,6 +51,7 @@ class SMUKeithley2450(SMUDevice):
         self.brand = "Keithley"
 
         self.settings = {
+            "ip address" : "",
             "brand" : self.brand,
             "model": self.modelname,
             "output": False,
@@ -81,8 +85,6 @@ class SMUKeithley2450(SMUDevice):
         }
 
         self.source = ""
-
-        self.reset()
 
     def getSettingsSchema(self):
         return self.settings
@@ -195,10 +197,10 @@ class SMUKeithley2450(SMUDevice):
         errorCode = line.split(',')[0]
         return (int(errorCode), line)
 
-def SMUFactory(model, session):
+def SMUFactory(model):
     if model not in [m.value[0] for m in SMUModel]:
         raise TypeError
     if model == '2450':
-        return SMUKeithley2450(session)
+        return SMUKeithley2450()
 
 

@@ -11,12 +11,7 @@ from utils import flatten_dict
 
 class SMU(midas.frontend.EquipmentBase):
 
-    def __init__(self, client, session, model):
-
-        self.session = session
-        self.smu = SMUFactory(model, session)
-
-        equip_name = f'SMU-{model}-{str(midas.frontend.frontend_index).zfill(2)}'
+    def __init__(self, client, model):
 
         default_common = midas.frontend.InitialEquipmentCommon()
         default_common.equip_type = midas.EQ_PERIODIC
@@ -27,7 +22,51 @@ class SMU(midas.frontend.EquipmentBase):
         default_common.read_when = midas.RO_ALWAYS
         default_common.log_history = 1
 
+        equip_name = f'SMU-{model}-{str(midas.frontend.frontend_index).zfill(2)}'
+        self.smu = SMUFactory(model)
+
         midas.frontend.EquipmentBase.__init__(self, client, equip_name, default_common, self.smu.getSettingsSchema());
+
+        ipaddress = self.settings['ip address']
+        if ipaddress == "":
+            self.client.msg(f"please set IP address to /Equipment/{equip_name}/Settings/port", is_error=True)
+            self.client.communicate(1000)
+            sys.exit(-1)
+
+        # lookup for SMU
+        rm = ResourceManager()
+        dev = f'TCPIP0::{ipaddress}::5025::SOCKET'
+
+        self.session = None
+        try:
+            self.session = rm.open_resource(dev)
+        except Exception as e:
+            self.client.communicate(1000)
+            self.client.msg(f"{e}", is_error=True)
+            sys.exit(-1)
+
+        self.session.read_termination = '\n'
+        self.session.write_termination = '\n'
+
+        try:
+            model = self.session.query('*CLS; *IDN?').split(',')[1]
+        except Exception as e:
+            self.client.msg(f"No device found on {ipaddress}", is_error=True)
+            self.client.communicate(1000)
+            sys.exit(-1)
+
+        if model.startswith("MODEL "):
+            model = model.split(' ')[1]
+
+        if model == args.model:
+            self.client.msg(f"SMU {model} found on {ipaddress}")
+        else:
+            self.client.msg(f"SMU {args.model} not found on {ipaddress}", is_error=True)
+            self.client.communicate(1000)
+            sys.exit(-1)
+
+        self.smu.setSession(self.session)
+        self.smu.reset()
 
         self.odb_readback_dir = f"/Equipment/{equip_name}/Readback"
 
@@ -103,6 +142,7 @@ class SMU(midas.frontend.EquipmentBase):
 
         self.client.odb_set(self.odb_readback_dir, readback, remove_unspecified_keys=False)
 
+        settings['ip address'] = self.settings['ip address']
         settings['output'] = self.smu.getOutput()
         settings['terminals'] = self.smu.getTerminals()
         settings['source']['function'] = self.smu.getSource()
@@ -124,42 +164,19 @@ class SMU(midas.frontend.EquipmentBase):
 
 class SMUFrontend(midas.frontend.FrontendBase):
 
-    def __init__(self, session, model):
+    def __init__(self, model):
         if(midas.frontend.frontend_index == -1):
             print("E: set frontend index with -i option")
             sys.exit(-1)
-        midas.frontend.FrontendBase.__init__(self, f"SMU-{model}")
-        self.add_equipment(SMU(self.client, session, model))
+        midas.frontend.FrontendBase.__init__(self, f"SMU-{model}-{str(midas.frontend.frontend_index).zfill(2)}")
+        self.add_equipment(SMU(self.client, model))
 
 if __name__ == "__main__":
     parser = midas.frontend.parser
-    parser.add_argument("--ip", required=True)
     parser.add_argument("--model", required=True, choices = [m.value[0] for m in SMUModel])
     args = midas.frontend.parse_args()
 
-    # lookup for SMU
-    rm = ResourceManager()
-    dev = f'TCPIP0::{args.ip}::5025::SOCKET'
-    session = rm.open_resource(dev)
-    session.read_termination = '\n'
-    session.write_termination = '\n'
-
-    try:
-        model = session.query('*IDN?').split(',')[1]
-    except Exception as e:
-        print(f"E: {e}")
-        sys.exit(-1)
-
-    if model.startswith("MODEL "):
-        model = model.split(' ')[1]
-
-    if model == args.model:
-        print(f"I: SMU {model} found on {args.ip}")
-    else:
-        print(f"E: SMU {args.model} not found on {args.ip}")
-        sys.exit(-1)
-
-    equip_name = f'SMU-{model}-{str(midas.frontend.frontend_index).zfill(2)}'
+    equip_name = f'SMU-{args.model}-{str(midas.frontend.frontend_index).zfill(2)}'
 
     # check if a SMU frontend is running with same model and id
     with midas.client.MidasClient("smu") as c:
@@ -173,5 +190,7 @@ if __name__ == "__main__":
                         c.msg(f"{equip_name} already running on MIDAS server, please change frontend index")
                         sys.exit(-1)
 
-    fe = SMUFrontend(session, model)
+        c.odb_delete("/Programs/smu")
+
+    fe = SMUFrontend(args.model)
     fe.run()
