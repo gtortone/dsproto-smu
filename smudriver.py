@@ -121,10 +121,10 @@ class SMUKeithley2450(SMUDevice):
         return float(self.query(":READ?"))
 
     def getCurrent(self):
-        return self.query(":MEAS:CURR:DC?")
+        return float(self.query(":MEAS:CURR:DC?"))
 
     def getVoltage(self):
-        return self.query(":MEAS:VOLT:DC?")
+        return float(self.query(":MEAS:VOLT:DC?"))
 
     # GENERIC source/measure voltage/current range
 
