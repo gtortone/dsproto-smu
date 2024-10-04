@@ -29,7 +29,7 @@ class SMU(midas.frontend.EquipmentBase):
 
         ipaddress = self.settings['ip address']
         if ipaddress == "":
-            self.client.msg(f"please set IP address to /Equipment/{equip_name}/Settings/port", is_error=True)
+            self.client.msg(f"please set IP address to /Equipment/{equip_name}/Settings/ip address", is_error=True)
             self.client.communicate(1000)
             sys.exit(-1)
 
