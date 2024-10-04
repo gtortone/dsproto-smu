@@ -84,8 +84,8 @@ class SMU(midas.frontend.EquipmentBase):
         print(f'source Vlimit: {self.smu.getLimit("VOLT")}')
         print(f'source Ilimit: {self.smu.getLimit("CURR")}')
         print("-")
-        print(f'measure func: {self.smu.getMeasure()}')
-        print(f'measure level: {self.smu.getMeasureLevel()}')
+        print(f'voltage: {self.smu.getVoltage()}')
+        print(f'current: {self.smu.getCurrent()}')
         print(f'measure Vrange: {self.smu.getRange("SENS", "VOLT")}')
         print(f'measure Irange: {self.smu.getRange("SENS", "CURR")}')
         print("-")
@@ -98,7 +98,8 @@ class SMU(midas.frontend.EquipmentBase):
         event = midas.event.Event()
 
         event.create_bank('SVAL', midas.TID_FLOAT, [float(self.smu.getSourceLevel())])
-        event.create_bank('MVAL', midas.TID_FLOAT, [float(self.smu.getMeasureLevel())])
+        event.create_bank('VOLT', midas.TID_FLOAT, [float(self.smu.getVoltage())])
+        event.create_bank('CURR', midas.TID_FLOAT, [float(self.smu.getCurrent())])
         event.create_bank('OUTP', midas.TID_INT32, [int(self.smu.getOutput())])
 
         return event
@@ -114,8 +115,6 @@ class SMU(midas.frontend.EquipmentBase):
             self.smu.setRange("SOURCE", "VOLT", new_value)
         elif path == f'{self.odb_settings_dir}/source/Irange':
             self.smu.setRange("SOURCE", "CURR", new_value)
-        elif path == f'{self.odb_settings_dir}/measure/function':
-            self.smu.setMeasure(new_value)
         elif path == f'{self.odb_settings_dir}/measure/Vrange':
             self.smu.setRange("SENS", "VOLT", new_value)
         elif path == f'{self.odb_settings_dir}/measure/Irange':
@@ -137,7 +136,8 @@ class SMU(midas.frontend.EquipmentBase):
 
         readback['source']['Vrange'] = self.smu.getRange("SOURCE", "VOLT")[0]
         readback['source']['Irange'] = self.smu.getRange("SOURCE", "CURR")[0]
-        readback['measure']['level'] = self.smu.getMeasureLevel()
+        readback['measure']['voltage'] = self.smu.getVoltage()
+        readback['measure']['current'] = self.smu.getCurrent()
         readback['measure']['Vrange'] = self.smu.getRange("SENS", "VOLT")[0]
         readback['measure']['Irange'] = self.smu.getRange("SENS", "CURR")[0] 
 
@@ -152,7 +152,6 @@ class SMU(midas.frontend.EquipmentBase):
         settings['source']['Irange'] = self.smu.getRange("SOURCE", "CURR")[1]
         settings['source']['Vlimit'] = self.smu.getLimit("VOLT")
         settings['source']['Ilimit'] = self.smu.getLimit("CURR")
-        settings['measure']['function'] = self.smu.getMeasure()
         settings['measure']['Vrange'] = self.smu.getRange("SENS", "VOLT")[1]
         settings['measure']['Irange'] = self.smu.getRange("SENS", "CURR")[1]
 
@@ -180,24 +179,25 @@ if __name__ == "__main__":
     equip_name = f'SMU-{args.model}-{str(midas.frontend.frontend_index).zfill(2)}'
 
     # check if a SMU frontend is running with same model and id
-    with midas.client.MidasClient("smu") as c:
+    c = midas.client.MidasClient("smu")
 
-        if c.odb_exists(f"/Equipment/{equip_name}/Common/Frontend name"):
-            fename = c.odb_get(f"/Equipment/{equip_name}/Common/Frontend name")
+    if c.odb_exists(f"/Equipment/{equip_name}/Common/Frontend name"):
+        fename = c.odb_get(f"/Equipment/{equip_name}/Common/Frontend name")
 
-            clients = c.odb_get(f'/System/Clients', recurse_dir=False)
-            for cid in clients:
-                client_name = ""
-                try:
-                    client_name = c.odb_get(f'/System/Clients/{cid}/Name')
-                except Exception as e:
-                    continue
+        clients = c.odb_get(f'/System/Clients', recurse_dir=False)
+        for cid in clients:
+            client_name = ""
+            try:
+                client_name = c.odb_get(f'/System/Clients/{cid}/Name')
+            except Exception as e:
+                continue
 
-                if client_name == fename:
-                    c.msg(f"{equip_name} already running on MIDAS server, please change frontend index")
-                    sys.exit(-1)
+            if client_name == fename:
+                c.msg(f"{equip_name} already running on MIDAS server, please change frontend index")
+                sys.exit(-1)
 
-        c.odb_delete("/Programs/smu")
+    c.odb_delete("/Programs/smu")
+    c.disconnect()
 
     fe = SMUFrontend(args.model)
     fe.run()

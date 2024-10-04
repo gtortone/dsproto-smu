@@ -65,7 +65,6 @@ class SMUKeithley2450(SMUDevice):
                 "Ilimit" : 0.0,
             },
             "measure" : {
-                "function" : "",
                 "Vrange" : "",
                 "Irange" : "",
             },
@@ -77,7 +76,8 @@ class SMUKeithley2450(SMUDevice):
                 "Irange" : "",
             },
             "measure" : {
-                "level" : 0.0,
+                "voltage" : 0.0,
+                "current" : 0.0,
                 "Vrange" : "",
                 "Irange" : "",
             },
@@ -119,6 +119,12 @@ class SMUKeithley2450(SMUDevice):
 
     def getMeasureLevel(self):
         return float(self.query(":READ?"))
+
+    def getCurrent(self):
+        return self.query(":MEAS:CURR:DC?")
+
+    def getVoltage(self):
+        return self.query(":MEAS:VOLT:DC?")
 
     # GENERIC source/measure voltage/current range
 
