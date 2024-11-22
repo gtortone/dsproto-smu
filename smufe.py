@@ -5,6 +5,7 @@ import midas
 import midas.frontend
 import midas.event
 from pyvisa import ResourceManager
+import socket
 
 from smudriver import SMUModel, SMUDevice, SMUFactory
 from utils import flatten_dict
@@ -32,6 +33,14 @@ class SMU(midas.frontend.EquipmentBase):
             self.client.msg(f"please set IP address to /Equipment/{equip_name}/Settings/ip address", is_error=True)
             self.client.communicate(1000)
             sys.exit(-1)
+
+        # Keithley 2450 needs socket cleaning before start
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.connect((ipaddress,5030))
+            s.close()
+        except Exception as e:
+            pass
 
         # lookup for SMU
         rm = ResourceManager()
